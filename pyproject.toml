@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyoctoplus"
+version = "0.1.0"
+description = "Clean-room, cross-platform Python driver and CLI for Teledyne e2v OctoPlus USB 3.0 line cameras"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Ryan Wilmington" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = []
+
+[project.scripts]
+octoplus-cli = "pyoctoplus.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pyoctoplus*"]

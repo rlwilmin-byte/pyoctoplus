@@ -1,0 +1,6 @@
+# Teledyne e2v OctoPlus USB 3.0 Line Cameras
+# Grants user read/write access to avoid needing root
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fd3", ATTR{idProduct}=="0616", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fd3", ATTR{idProduct}=="0f0d", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fd3", ATTR{idProduct}=="0615", MODE="0666", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0fd3", ATTR{idProduct}=="0611", MODE="0666", TAG+="uaccess"
