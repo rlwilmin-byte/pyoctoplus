@@ -23,18 +23,31 @@ from pyoctoplus.registers import (
 def _format_status(cam: OctoPlusCamera):
     info = cam.get_device_info()
     status_flags = cam.get_status_flags()
-    period_us = cam.get_line_period()
-    rate_hz = cam.get_line_rate()
-    min_period_us = cam.get_line_period_min()
-    exp_us = cam.get_exposure_time()
-    exp_min, exp_max = cam.get_exposure_range()
+    is_running = cam.is_acquisition_running()
+
+    try:
+        period_us = cam.get_line_period()
+        rate_hz = cam.get_line_rate()
+    except Exception:
+        period_us, rate_hz = 0.0, 0.0
+
+    try:
+        min_period_us = cam.get_line_period_min()
+    except Exception:
+        min_period_us = 0.0
+
+    try:
+        exp_us = cam.get_exposure_time()
+        exp_min, exp_max = cam.get_exposure_range()
+    except Exception:
+        exp_us, exp_min, exp_max = 0.0, 0.0, 0.0
+
     trig_mode = cam.get_trigger_mode()
     gpo_mode = cam.get_gpo_mode()
     gain = cam.get_analog_gain()
     dig_gain = cam.get_digital_gain()
     offset = cam.get_digital_offset()
     pattern = cam.get_test_pattern()
-    is_running = cam.is_acquisition_running()
 
     print("=" * 60)
     print(f"  e2v OctoPlus Camera Status & Configuration")
@@ -46,8 +59,11 @@ def _format_status(cam: OctoPlusCamera):
     print(f"  Sensor Width:     {info['sensor_width']} pixels")
     print("-" * 60)
     print(f"  Acquisition:      {'ACTIVE (Pulsing Sync Out)' if is_running else 'STOPPED'}")
-    print(f"  Line Rate:        {rate_hz:,.1f} Hz  (Period: {period_us:.2f} µs | Min: {min_period_us:.2f} µs)")
-    print(f"  Exposure Time:    {exp_us:.2f} µs  (Allowed: [{exp_min:.2f} µs .. {exp_max:.2f} µs])")
+    if rate_hz > 0:
+        print(f"  Line Rate:        {rate_hz:,.1f} Hz  (Period: {period_us:.2f} µs | Min: {min_period_us:.2f} µs)")
+        print(f"  Exposure Time:    {exp_us:.2f} µs  (Allowed: [{exp_min:.2f} µs .. {exp_max:.2f} µs])")
+    else:
+        print(f"  Line Rate:        [Acquisition running - timings locked]")
     print(f"  Trigger Mode:     {trig_mode.name} ({int(trig_mode)})")
     print(f"  GPO Sync Mode:    {gpo_mode.name} (0x{int(gpo_mode):02X}) -> Pin 3 of Hirose connector")
     print(f"  Analog Gain:      {gain.name} ({int(gain)})")
@@ -186,19 +202,21 @@ def main(argv=None) -> int:
 
         # Perform action
         if args.start:
+            rate = cam.get_line_rate()
+            exp = cam.get_exposure_time()
             cam.start_acquisition()
             print("[OK] Acquisition STARTED. Hardware trigger sync out is ACTIVE on Hirose Pin 3.")
-            print(f"     Line rate: {cam.get_line_rate():,.1f} Hz | Exposure: {cam.get_exposure_time():.2f} µs")
+            print(f"     Line rate: {rate:,.1f} Hz | Exposure: {exp:.2f} µs")
 
         elif args.stop:
             cam.stop_acquisition()
             print("[OK] Acquisition STOPPED. Hardware trigger sync out is INACTIVE.")
 
         elif args.run:
-            print("[OK] Starting continuous acquisition...")
-            cam.start_acquisition()
             rate = cam.get_line_rate()
             exp = cam.get_exposure_time()
+            print("[OK] Starting continuous acquisition...")
+            cam.start_acquisition()
             print(f"     Sync out active on Pin 3 @ {rate:,.1f} Hz ({1e6/rate:.2f} µs period, {exp:.2f} µs pulse)")
             print("     Draining USB stream. Press Ctrl+C to stop.\n")
 

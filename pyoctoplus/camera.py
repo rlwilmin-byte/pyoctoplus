@@ -272,14 +272,14 @@ class OctoPlusCamera:
         finally:
             self._lib.libusb_free_device_list(dev_list, 1)
 
-    def close(self):
+    def close(self, stop_acquisition: bool = False):
         """Release interface and close the camera handle."""
         if self._handle:
-            try:
-                # Ensure acquisition is stopped before closing
-                self.write_u32(REG_ACQUISITION_STOP, 0)
-            except Exception:
-                pass
+            if stop_acquisition:
+                try:
+                    self.write_u32(REG_ACQUISITION_STOP, 0)
+                except Exception:
+                    pass
             try:
                 self._lib.libusb_release_interface(self._handle, 0)
             except Exception:
@@ -412,8 +412,11 @@ class OctoPlusCamera:
         except Exception:
             pass
 
-        fw_raw = self.read_register(REG_FIRMWARE_VERSION, 2)
-        fw_ver = f"{fw_raw[1]}.{fw_raw[0]}" if len(fw_raw) == 2 else "Unknown"
+        fw_ver = "Unknown"
+        try:
+            fw_ver = self.read_string(REG_FIRMWARE_VERSION, 4)
+        except Exception:
+            pass
 
         return {
             "manufacturer": mfg,
