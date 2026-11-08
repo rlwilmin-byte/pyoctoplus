@@ -622,3 +622,33 @@ class OctoPlusCamera:
         finally:
             if not was_running:
                 self.stop_acquisition()
+
+
+def unpack_mono12p(data: bytes, width: int = 2048) -> list[list[int]]:
+    """
+    Unpack standard USB3 Vision Mono12p packed bytes (3 bytes -> 2 pixels)
+    into a list of lines [num_lines][width], where each pixel value is in [0..4095].
+    Automatically skips the 16-byte U3VL header if present.
+    """
+    offset = 0
+    if len(data) >= 16 and data[:4] == b"U3VL":
+        offset = 16
+
+    payload = data[offset:]
+    line_stride = (width * 3) // 2  # 3072 bytes per 2048-pixel line
+    num_lines = len(payload) // line_stride
+
+    lines = []
+    for l_idx in range(num_lines):
+        line_start = l_idx * line_stride
+        line_data = payload[line_start : line_start + line_stride]
+        pixels = []
+        for i in range(0, line_stride, 3):
+            b0 = line_data[i]
+            b1 = line_data[i + 1]
+            b2 = line_data[i + 2]
+            p0 = b0 | ((b1 & 0x0F) << 8)
+            p1 = (b1 >> 4) | (b2 << 4)
+            pixels.extend((p0, p1))
+        lines.append(pixels[:width])
+    return lines

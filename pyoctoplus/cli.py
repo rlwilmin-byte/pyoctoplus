@@ -252,17 +252,31 @@ def main(argv=None) -> int:
             filename = args.snap
             print(f"Acquiring snapshot chunk (64 KB)...")
             raw_data = cam.snap(num_bytes=65536)
+
             with open(filename, "wb") as f:
                 f.write(raw_data)
-            print(f"[OK] Saved {len(raw_data):,} bytes to {filename}")
+            print(f"[OK] Saved {len(raw_data):,} raw bytes to {filename}")
 
-            # Inspect first pixels if payload data is present
-            if len(raw_data) >= 64:
-                import struct
-                # Unpack 16-bit words (little-endian)
-                num_words = min(16, len(raw_data) // 2)
-                words = struct.unpack(f"<{num_words}H", raw_data[:num_words*2])
-                print(f"     First {num_words} raw words: {words}")
+            # Decode lines using Mono12p unpacker
+            from pyoctoplus.camera import unpack_mono12p
+            lines = unpack_mono12p(raw_data, width=cam._sensor_width)
+            if lines:
+                all_px = [p for line in lines for p in line]
+                min_val = min(all_px)
+                max_val = max(all_px)
+                mean_val = sum(all_px) / len(all_px)
+                print(f"[OK] Unpacked {len(lines)} complete lines ({len(lines[0])} pixels/line, 12-bit [0..4095]):")
+                print(f"     Intensity Stats: Min={min_val}, Max={max_val}, Mean={mean_val:.1f}")
+                print(f"     Line 0 sample pixels: {lines[0][:10]} ... {lines[0][-5:]}")
+
+                # If requested as .npy or if numpy is available, also save as numpy array
+                if filename.endswith(".npy"):
+                    try:
+                        import numpy as np
+                        np.save(filename, np.array(lines, dtype=np.uint16))
+                        print(f"[OK] Saved NumPy array of shape {np.array(lines).shape} to {filename}")
+                    except ImportError:
+                        pass
 
         else:
             # Default action: show status
