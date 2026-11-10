@@ -101,6 +101,11 @@ def main(argv=None) -> int:
         help="Stop camera acquisition (halts sync out pulses).",
     )
     action_group.add_argument(
+        "--pulse",
+        action="store_true",
+        help="Emit a single trigger pulse on Hirose Pin 3 to step the MUX phase (no streaming).",
+    )
+    action_group.add_argument(
         "--run",
         action="store_true",
         help="Run acquisition continuously in the foreground (sync out active until Ctrl+C).",
@@ -151,6 +156,18 @@ def main(argv=None) -> int:
         type=int,
         choices=[p.value for p in TestPattern],
         help="Set internal test pattern (0: Sensor, 1: Horizontal Ramp, 7: Checkerboard).",
+    )
+    parser.add_argument(
+        "--pulse-ms",
+        type=float,
+        default=10.0,
+        help="Duration of the single manual pulse in milliseconds (default: 10.0 ms).",
+    )
+    parser.add_argument(
+        "--pulse-val",
+        type=lambda x: int(x, 0),
+        default=None,
+        help="Explicit register value for GPO HIGH state (e.g. 0x2F).",
     )
 
     args = parser.parse_args(argv)
@@ -211,6 +228,14 @@ def main(argv=None) -> int:
         elif args.stop:
             cam.stop_acquisition()
             print("[OK] Acquisition STOPPED. Hardware trigger sync out is INACTIVE.")
+
+        elif args.pulse:
+            duration = args.pulse_ms
+            high_val = args.pulse_val
+            val_str = f" (register value 0x{high_val:02X})" if high_val is not None else ""
+            print(f"Emitting single trigger pulse on Hirose Pin 3 ({duration:.1f} ms){val_str}...")
+            cam.pulse_sync_out(duration_ms=duration, high_val=high_val)
+            print("[OK] Single pulse emitted. Hardware trigger sync out cycled once.")
 
         elif args.run:
             rate = cam.get_line_rate()

@@ -512,6 +512,36 @@ class OctoPlusCamera:
         """Set GPO (Pin 3 sync out) mode. Default 0x2E = exposure pulse."""
         self.write_u32(REG_GPO_CONFIG, int(mode))
 
+    def pulse_sync_out(
+        self,
+        duration_ms: float = 10.0,
+        high_val: Optional[int] = None,
+        low_val: Optional[int] = None,
+    ):
+        """
+        Emit a single manual pulse on Hirose Pin 3 (GPO).
+        Steers external MUX pulser boxes (CD4017 decade counter) to advance
+        by exactly one phase (e.g. Dark -> 808nm -> 980nm -> Dark)
+        without activating continuous streaming or line acquisition.
+
+        By default, toggles the GPO configuration register (0x122FC) between
+        inverted polarity (0x2F) and normal idle (0x2E) for the specified
+        duration, providing a clean hardware clock edge on Pin 3.
+        """
+        orig_gpo = self.read_u32(REG_GPO_CONFIG)
+        if high_val is None:
+            # 0x2E has bit 0 = 0. Toggling bit 0 (0x2F) inverts the polarity
+            # causing the idle line to transition from LOW to HIGH.
+            high_val = 0x2F if orig_gpo == 0x2E else (orig_gpo ^ 0x01)
+        if low_val is None:
+            low_val = orig_gpo
+
+        # 1. Drive HIGH
+        self.write_u32(REG_GPO_CONFIG, high_val)
+        time.sleep(max(0.001, duration_ms / 1000.0))
+        # 2. Drive LOW / restore
+        self.write_u32(REG_GPO_CONFIG, low_val)
+
     # -----------------------------------------------------------------------
     # Image Geometry & Processing
     # -----------------------------------------------------------------------

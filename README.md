@@ -69,6 +69,10 @@ pip install -e .
 # Stop acquisition
 ./octoplus-cli --stop
 
+# Emit a single hardware trigger pulse on Hirose Pin 3 (steps MUX phase without streaming)
+./octoplus-cli --pulse
+./octoplus-cli --pulse --pulse-ms 20
+
 # Continuous acquisition stream monitor (displays live MB/s until Ctrl+C)
 ./octoplus-cli --run
 
